@@ -15,9 +15,21 @@ namespace Confuser.Renamer.Analyzers {
 				if (type.IsInterface)
 					return;
 
-				vTbl = service.GetVTables()[type];
+                var dontRenImpls = parameters.GetParameter(context, type, "dontRenImpls", false);
+
+                vTbl = service.GetVTables()[type];
 				foreach (var ifaceVTbl in vTbl.InterfaceSlots.Values) {
 					foreach (var slot in ifaceVTbl) {
+                        if (dontRenImpls)
+                        {
+                            service.SetCanRename(slot.MethodDef, false);
+                            if (slot.Overrides != null)
+                            {
+                                service.SetCanRename(slot.Overrides.MethodDef, false);
+                            }
+                            continue;
+                        }
+
 						if (slot.Overrides == null)
 							continue;
 						Debug.Assert(slot.Overrides.MethodDef.DeclaringType.IsInterface);
@@ -40,6 +52,12 @@ namespace Confuser.Renamer.Analyzers {
 				if (!method.IsVirtual)
 					return;
 
+                //{ 
+                //    if (def.FullName.Contains("InfoNNGF::get_Su"))
+                //    {
+                //        context.Logger.Debug("luserinfo: " + def.FullName);
+                //    }
+                //}
 				vTbl = service.GetVTables()[method.DeclaringType];
 				VTableSignature sig = VTableSignature.FromMethod(method);
 				var slots = vTbl.FindSlots(method);
@@ -55,10 +73,10 @@ namespace Confuser.Renamer.Analyzers {
 				}
 				else {
 					foreach (var slot in slots) {
-						if (slot.Overrides == null)
+                        if (slot.Overrides == null)
 							continue;
-						service.SetCanRename(method, false);
-						service.SetCanRename(slot.Overrides.MethodDef, false);
+                        service.SetCanRename(method, false);
+                        service.SetCanRename(slot.Overrides.MethodDef, false);
 					}
 				}
 			}

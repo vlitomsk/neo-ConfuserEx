@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Confuser.Core;
 using Confuser.Renamer.Analyzers;
 using dnlib.DotNet;
@@ -157,7 +158,7 @@ namespace Confuser.Renamer
             var type = def as TypeDef;
             if (type == null)
                 type = def.DeclaringType;
-
+            
             var renPublic = parameters.GetParameter<bool?>(context, def, "renPublic", null);
             if (renPublic == null)
                 return type.IsVisibleOutside();
@@ -238,7 +239,13 @@ namespace Confuser.Renamer
 
         void Analyze(NameService service, ConfuserContext context, ProtectionParameters parameters, PropertyDef property)
         {
-            if (IsVisibleOutside(context, parameters, property.DeclaringType) &&
+            bool setRename = service.CanRename(property.SetMethod);
+            bool getRename = service.CanRename(property.GetMethod);
+            if ((!setRename || !getRename) &&
+                parameters.GetParameter(context, property, "dontRenImpls", false))
+                service.SetCanRename(property, false);
+
+            else if (IsVisibleOutside(context, parameters, property.DeclaringType) &&
                 property.IsPublic() &&
                 IsVisibleOutside(context, parameters, property))
                 service.SetCanRename(property, false);
